@@ -1,15 +1,11 @@
-package filter
+package service
 
 import (
 	"regexp"
 	"strings"
 )
 
-var banWords = []string{
-	"nigger",
-	"gay",
-	"дурак",
-}
+var banWords = []string{"nigger", "gay", "дурак"}
 
 var (
 	urlRegex   = regexp.MustCompile(`https?://[^\s]+`)
@@ -28,9 +24,4 @@ func ContainsBannedWords(text string) bool {
 
 func ContainsLinks(text string) bool {
 	return urlRegex.MatchString(text)
-}
-
-func IsDuplicate(content string, prev map[string]bool) bool {
-	_, exists := prev[strings.ToLower(content)]
-	return exists
 }

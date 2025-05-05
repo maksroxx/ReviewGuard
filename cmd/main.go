@@ -1,14 +1,17 @@
 package main
 
 import (
-	"log"
-	"net/http"
-
-	"github.com/maksroxx/ReviewGuard/internal/api"
+	"github.com/gin-gonic/gin"
+	"github.com/maksroxx/ReviewGuard/internal/handlers"
+	redisclient "github.com/maksroxx/ReviewGuard/internal/redis"
 )
 
 func main() {
-	http.HandleFunc("/review", api.ReviewHandler)
-	log.Println("ReviewGuard :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	redisclient.InitRedis()
+	router := gin.Default()
+
+	router.POST("/review", handlers.ReviewHandler)
+	router.GET("/moderation/history", handlers.GetHistoryHandler)
+
+	router.Run(":8080")
 }
