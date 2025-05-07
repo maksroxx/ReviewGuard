@@ -10,5 +10,18 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: reviewguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./internal/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
 volumes:
   redis_data:
+  pgdata:

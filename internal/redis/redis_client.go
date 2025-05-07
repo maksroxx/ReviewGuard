@@ -5,15 +5,18 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var (
+type RedisClient struct {
 	RDB     *redis.Client
 	Limiter *redis_rate.Limiter
-)
+}
 
-func InitRedis() {
-	RDB = redis.NewClient(&redis.Options{
+func NewRedisClient() *RedisClient {
+	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 		DB:   0,
 	})
-	Limiter = redis_rate.NewLimiter(RDB)
+	return &RedisClient{
+		RDB:     rdb,
+		Limiter: redis_rate.NewLimiter(rdb),
+	}
 }

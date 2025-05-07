@@ -8,9 +8,11 @@ import (
 	"github.com/maksroxx/ReviewGuard/internal/service"
 )
 
-func GetHistoryHandler(c *gin.Context) {
-	ctx := context.Background()
-	ip := c.ClientIP()
-	history := service.GetHistory(ctx, ip)
-	c.JSON(http.StatusOK, history)
+func GetHistoryHandler(svc service.HistoryService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		ip := c.ClientIP()
+		history := svc.GetHistory(ctx, ip)
+		c.JSON(http.StatusOK, history)
+	}
 }
