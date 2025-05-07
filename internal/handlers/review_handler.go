@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -9,37 +10,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/maksroxx/ReviewGuard/internal/db"
 	"github.com/maksroxx/ReviewGuard/internal/models"
-	"github.com/maksroxx/ReviewGuard/internal/redis"
+	redisclient "github.com/maksroxx/ReviewGuard/internal/redis"
 	"github.com/maksroxx/ReviewGuard/internal/service"
+	"github.com/redis/go-redis/v9"
 )
 
-func ReviewHandler(redis redis.RedisClient, svc service.HistoryService, rep db.PostgresRepository) gin.HandlerFunc {
+func ReviewHandler(red redisclient.RedisClient, svc service.HistoryService, rep db.PostgresRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := context.Background()
 		ip := c.ClientIP()
-
-		// limitMinute := redis_rate.PerMinute(5)
-		// limitHour := redis_rate.Limit{Rate: 20, Period: time.Hour}
-
-		// resMin, err := redis.Limiter.Allow(ctx, ip+":minute", limitMinute)
-		// if err != nil {
-		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "rate limit error"})
-		// 	return
-		// }
-		// if resMin.Allowed == 0 {
-		// 	c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many requests (minute limit)", "retry_after": resMin.RetryAfter.Seconds()})
-		// 	return
-		// }
-
-		// resHour, err := redis.Limiter.Allow(ctx, ip+":hour", limitHour)
-		// if err != nil {
-		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "rate limit error"})
-		// 	return
-		// }
-		// if resHour.Allowed == 0 {
-		// 	c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many requests (hour limit)", "retry_after": resHour.RetryAfter.Seconds()})
-		// 	return
-		// }
 
 		var review models.Review
 		if err := c.ShouldBindJSON(&review); err != nil {
@@ -50,16 +29,22 @@ func ReviewHandler(redis redis.RedisClient, svc service.HistoryService, rep db.P
 		review.ID = uuid.New().String()
 		review.UserIP = ip
 		review.CreatedAt = time.Now()
+		review.Status = "pending"
 
-		if service.ContainsBannedWords(review.Content) || service.ContainsLinks(review.Content) {
-			review.Status = "moderation"
-		} else {
-			review.Status = "approved"
+		if err := rep.SaveReview(ctx, &review); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save review"})
+			return
 		}
 
-		svc.SaveToHistory(ctx, review)
-		rep.SaveReview(ctx, &review)
+		data, _ := json.Marshal(review)
+		if err := red.RDB.XAdd(ctx, &redis.XAddArgs{
+			Stream: "moderation_stream",
+			Values: map[string]interface{}{"data": data},
+		}).Err(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to enqueue moderation"})
+			return
+		}
 
-		c.JSON(http.StatusOK, gin.H{"status": review.Status})
+		c.JSON(http.StatusOK, gin.H{"status": "queued_for_moderation"})
 	}
 }

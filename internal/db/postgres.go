@@ -12,7 +12,6 @@ type PostgreDB struct {
 }
 
 func NewPostgreDB(dsn string) *PostgreDB {
-	var err error
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		log.Fatal(err)

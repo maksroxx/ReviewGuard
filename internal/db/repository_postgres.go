@@ -101,3 +101,9 @@ func (p *PostgresRepository) GetReviewsByStatus(ctx context.Context, status stri
 	}
 	return reviews, nil
 }
+
+func (p *PostgresRepository) UpdateReviewStatus(ctx context.Context, id, status string) error {
+	query := `UPDATE reviews SET status = $1 WHERE id = $2`
+	_, err := p.db.Database.ExecContext(ctx, query, status, id)
+	return err
+}

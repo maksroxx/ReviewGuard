@@ -6,6 +6,7 @@ import (
 	"github.com/maksroxx/ReviewGuard/internal/handlers"
 	redisclient "github.com/maksroxx/ReviewGuard/internal/redis"
 	"github.com/maksroxx/ReviewGuard/internal/service"
+	"github.com/maksroxx/ReviewGuard/internal/worker"
 )
 
 func main() {
@@ -23,8 +24,9 @@ func main() {
 	router.GET("/moderation/history", handlers.GetHistoryHandler(*historySvc))
 	router.GET("/report/stats", handlers.ReportStatsHandler(*cacheSvc, *rep))
 	router.GET("/report/spam", handlers.GetSpamReviewsHandler(*rep))
-	// query ip
 	router.GET("/report/by-ip", handlers.GetReviewsByIPHandler(*rep))
+
+	go worker.StartModerationWorker(redis.RDB, rep)
 
 	router.Run(":8080")
 }
